@@ -513,6 +513,10 @@ def getMultiScaleCosAffinityMatrix(
             start_idx = chunk_idx * chunk_size
             end_idx = start_idx + score_mat_torch.shape[0]
 
+            print(f"scale_idx: {scale_idx}, chunk_idx: {chunk_idx}, mapping_argmat: {mapping_argmat}")
+            print(f"start_idx: {start_idx}, end_idx: {end_idx}, mapping_argmat.shape[0]: {mapping_argmat.shape[0]}")
+
+
             # Assert that the indices are within the bounds of mapping_argmat
             assert (start_idx < mapping_argmat.shape[0]) & (end_idx <= mapping_argmat.shape[0]), "Invalid indices: start_idx or end_idx out of bounds"
 
