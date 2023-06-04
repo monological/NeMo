@@ -32,6 +32,7 @@
 # https://github.com/tango4j/Auto-Tuning-Spectral-Clustering.
 
 from typing import Dict, List, Tuple
+import math
 
 import torch
 from torch.linalg import eigh, eigvalsh
