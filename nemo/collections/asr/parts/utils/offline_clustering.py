@@ -529,7 +529,11 @@ def getMultiScaleCosAffinityMatrix(
             repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
 
             slice_size = end_idx - start_idx
-            fused_sim_d[start_idx:end_idx, start_idx:end_idx] += multiscale_weights[scale_idx] * repeated_tensor_1[:slice_size, :slice_size]
+
+            repeated_tensor_resized = torch.zeros((slice_size, slice_size), device=device)
+            repeated_tensor_resized[:min(repeated_tensor_1.shape[0], slice_size), :min(repeated_tensor_1.shape[1], slice_size)] \
+                = repeated_tensor_1[:min(repeated_tensor_1.shape[0], slice_size), :min(repeated_tensor_1.shape[1], slice_size)]
+            fused_sim_d[start_idx:end_idx, start_idx:end_idx] += multiscale_weights[scale_idx] * repeated_tensor_resized
 
     return fused_sim_d
 
