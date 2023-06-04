@@ -377,10 +377,11 @@ def getRepeatedList(mapping_argmat: torch.Tensor, score_mat_size: torch.Tensor) 
     repeated indices that will be used for creating a repeated affinity matrix.
     This repeated matrix is then used for fusing multiple affinity values.
     """
-    repeat_list = torch.zeros(score_mat_size, dtype=torch.int32).to(mapping_argmat.device)
+    max_idx = torch.max(mapping_argmat).item()
+    repeat_list = torch.zeros(max(max_idx + 1, score_mat_size), dtype=torch.int32).to(mapping_argmat.device)
     idxs, counts = torch.unique(mapping_argmat, return_counts=True)
     repeat_list[idxs] = counts.int().to(mapping_argmat.device)
-    return repeat_list
+    return repeat_list[:score_mat_size]
 
 
 def get_argmin_mat(timestamps_in_scales: List[torch.Tensor]) -> List[torch.Tensor]:
@@ -487,46 +488,42 @@ def get_scale_interpolated_embs(
     context_emb = context_emb.to(device)
     return context_emb, session_scale_mapping_list
 
-
 def getMultiScaleCosAffinityMatrix(
     multiscale_weights: torch.Tensor,
     embeddings_in_scales: List[torch.Tensor],
     timestamps_in_scales: List[torch.Tensor],
     device: torch.device = torch.device('cpu'),
+    chunk_size: int = 1000
 ) -> torch.Tensor:
-    """
-    Calculate cosine similarity values among speaker embeddings for each scale then
-    apply multiscale weights to calculate the fused similarity matrix.
-    NOTE: Due to CUDA memory limit, the embedding vectors in embeddings_in_scales are stored in `cpu` device.
 
-    Args:
-        multiscale_weights (Tensor):
-            Tensor containing multiscale weights
-            Dimensions: (Number of scales) x 1
-        embeddings_in_scales (list):
-            List containing split embedding tensors by each scale
-        timestamps_in_scales (list):
-            List containing split timestamps tensors by each scale
-        device (torch.device):
-            Torch device variable
-
-    Returns:
-        fused_sim_d (Tensor):
-            An affinity matrix that is obtained by calculating the weighted sum of 
-            the multiple affinity matrices from the different scales.
-    """
     multiscale_weights = torch.squeeze(multiscale_weights, dim=0).to(device)
     session_scale_mapping_list = get_argmin_mat(timestamps_in_scales)
     scale_list = list(range(len(timestamps_in_scales)))
     fused_sim_d = torch.zeros(len(timestamps_in_scales[-1]), len(timestamps_in_scales[-1])).to(device)
+
     for scale_idx in scale_list:
         mapping_argmat = session_scale_mapping_list[scale_idx]
         emb_t = embeddings_in_scales[scale_idx].half().to(device)
-        score_mat_torch = getCosAffinityMatrix(emb_t)
-        repeat_list = getRepeatedList(mapping_argmat, torch.tensor(score_mat_torch.shape[0])).to(device)
-        repeated_tensor_0 = torch.repeat_interleave(score_mat_torch, repeats=repeat_list, dim=0).to(device)
-        repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
-        fused_sim_d += multiscale_weights[scale_idx] * repeated_tensor_1
+
+        # We are going to process data in chunks to save memory.
+        chunks = torch.chunk(emb_t, chunk_size, dim=0)
+        score_mat_torch_chunks = [getCosAffinityMatrix(chunk) for chunk in chunks]
+
+        for chunk_idx, score_mat_torch in enumerate(score_mat_torch_chunks):
+            start_idx = chunk_idx * chunk_size
+            end_idx = start_idx + score_mat_torch.shape[0]
+
+            # Assert that the indices are within the bounds of mapping_argmat
+            assert (start_idx < mapping_argmat.shape[0]) & (end_idx <= mapping_argmat.shape[0]), "Invalid indices: start_idx or end_idx out of bounds"
+
+            # Ensure that mapping_argmat is of the correct size
+            mapping_argmat = mapping_argmat[:end_idx]
+
+            repeat_list = getRepeatedList(mapping_argmat[start_idx:end_idx], torch.tensor(score_mat_torch.shape[0])).to(device)
+            repeated_tensor_0 = torch.repeat_interleave(score_mat_torch, repeats=repeat_list, dim=0).to(device)
+            repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
+            fused_sim_d[start_idx:end_idx, start_idx:end_idx] += multiscale_weights[scale_idx] * repeated_tensor_1
+
     return fused_sim_d
 
 
