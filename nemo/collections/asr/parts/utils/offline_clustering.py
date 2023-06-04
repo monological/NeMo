@@ -509,10 +509,10 @@ def getMultiScaleCosAffinityMatrix(
         chunks = torch.chunk(emb_t, chunk_size, dim=0)
         score_mat_torch_chunks = [getCosAffinityMatrix(chunk) for chunk in chunks]
 
+        num_chunks = (mapping_argmat.shape[0] + chunk_size - 1) // chunk_size  # Calculate the number of chunks based on chunk_size
         for chunk_idx, score_mat_torch in enumerate(score_mat_torch_chunks):
-            start_idx = min(scale_idx * chunk_idx * num_argmat_chunks, mapping_argmat.shape[0] - 1)
-            end_idx = min(start_idx + num_argmat_chunks, mapping_argmat.shape[0])
-
+            start_idx = min(chunk_idx * chunk_size, mapping_argmat.shape[0] - 1)
+            end_idx = min(start_idx + chunk_size, mapping_argmat.shape[0])
 
             print(f"scale_idx: {scale_idx}, chunk_idx: {chunk_idx}, mapping_argmat: {mapping_argmat}")
             print(f"start_idx: {start_idx}, end_idx: {end_idx}, mapping_argmat.shape[0]: {mapping_argmat.shape[0]}")
