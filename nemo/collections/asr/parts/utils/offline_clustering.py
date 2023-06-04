@@ -324,23 +324,37 @@ def getKneighborsConnections(affinity_mat: torch.Tensor, p_value: int, mask_meth
     """
     dim = affinity_mat.shape
     binarized_affinity_mat = torch.zeros_like(affinity_mat).half()
-    sorted_matrix = torch.argsort(affinity_mat, dim=1, descending=True)[:, :p_value]
-    binarized_affinity_mat[sorted_matrix.T, torch.arange(affinity_mat.shape[0])] = (
-        torch.ones(1).to(affinity_mat.device).half()
-    )
-    indices_row = sorted_matrix[:, :p_value].flatten()
-    indices_col = torch.arange(dim[1]).repeat(p_value, 1).T.flatten()
-    if mask_method == 'binary' or mask_method is None:
-        binarized_affinity_mat[indices_row, indices_col] = (
-            torch.ones(indices_row.shape[0]).to(affinity_mat.device).half()
+
+    chunk_size = 128  # Adjust this value based on your GPU memory
+    num_chunks = math.ceil(dim[0] / chunk_size)
+
+    for i in range(num_chunks):
+        start_idx = i * chunk_size
+        end_idx = min((i + 1) * chunk_size, dim[0])
+
+        with torch.no_grad():
+            sorted_matrix_chunk = torch.argsort(affinity_mat[start_idx:end_idx], dim=1, descending=True)[:, :p_value]
+
+        binarized_affinity_mat[start_idx:end_idx, sorted_matrix_chunk.T] = (
+            torch.ones(1).to(affinity_mat.device).half()
         )
-    elif mask_method == 'drop':
-        binarized_affinity_mat[indices_row, indices_col] = affinity_mat[indices_row, indices_col].half()
-    elif mask_method == 'sigmoid':
-        binarized_affinity_mat[indices_row, indices_col] = torch.sigmoid(affinity_mat[indices_row, indices_col]).half()
-    else:
-        raise ValueError(f'Unknown mask method: {mask_method}')
+
+        indices_row = sorted_matrix_chunk[:, :p_value].flatten()
+        indices_col = torch.arange(dim[1]).repeat(p_value, 1).T.flatten()
+
+        if mask_method == 'binary' or mask_method is None:
+            binarized_affinity_mat[indices_row, indices_col] = (
+                torch.ones(indices_row.shape[0]).to(affinity_mat.device).half()
+            )
+        elif mask_method == 'drop':
+            binarized_affinity_mat[indices_row, indices_col] = affinity_mat[indices_row, indices_col].half()
+        elif mask_method == 'sigmoid':
+            binarized_affinity_mat[indices_row, indices_col] = torch.sigmoid(affinity_mat[indices_row, indices_col]).half()
+        else:
+            raise ValueError(f'Unknown mask method: {mask_method}')
+
     return binarized_affinity_mat
+
 
 
 def getAffinityGraphMat(affinity_mat_raw: torch.Tensor, p_value: int) -> torch.Tensor:
