@@ -341,7 +341,7 @@ def getKneighborsConnections(affinity_mat: torch.Tensor, p_value: int, mask_meth
         )
 
         indices_row = sorted_matrix_chunk[:, :p_value].flatten()
-        indices_col = torch.arange(dim[1]).repeat(p_value, 1).T.flatten()
+        indices_col = torch.arange(start_idx, end_idx).repeat(p_value, 1).T.flatten()
 
         if mask_method == 'binary' or mask_method is None:
             binarized_affinity_mat[indices_row, indices_col] = (
