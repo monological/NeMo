@@ -564,14 +564,11 @@ def eigDecompose(laplacian: torch.Tensor, cuda: bool, device: torch.device) -> T
     """
     Calculate eigenvalues and eigenvectors from the Laplacian matrix.
     """
-    if cuda:
-        if device is None:
-            device = torch.cuda.current_device()
-        laplacian = laplacian.float().to(device)
-    else:
-        laplacian = laplacian.float().to(torch.device('cpu'))
-    torch.cuda.empty_cache()
+    laplacian = laplacian.float().to(torch.device('cpu'))
     lambdas, diffusion_map = eigh(laplacian)
+    if cuda:
+        lambdas = lambdas.to(device)
+        diffusion_map = diffusion_map.to(device)
     return lambdas, diffusion_map
 
 
