@@ -567,16 +567,18 @@ def getLaplacian(X: torch.Tensor) -> torch.Tensor:
     return L
 
 
-def eigDecompose(laplacian: torch.Tensor, cuda: bool, device: torch.device) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Calculate eigenvalues and eigenvectors from the Laplacian matrix.
-    """
-    laplacian = laplacian.float().to(torch.device('cpu'))
-    lambdas, diffusion_map = eigh(laplacian)
-    if cuda:
-        lambdas = lambdas.to(device)
-        diffusion_map = diffusion_map.to(device)
-    return lambdas, diffusion_map
+def eigDecompose(laplacian_matrix, k):
+    # Laplacian matrix must be symmetric, hence we assert this below.
+    assert torch.allclose(laplacian_matrix, laplacian_matrix.T), \
+        "Your Laplacian Matrix is not symmetric. Make sure that it is symmetric to perform Spectral Clustering."
+
+    # Making sure the matrix is on the same device as the laplacian matrix
+    initial = torch.randn((laplacian_matrix.size(-1), k)).to(laplacian_matrix.device)
+
+    # eigenvalues and eigenvectors
+    eigenvalues, eigenvectors = torch.lobpcg(laplacian_matrix, k=k, largest=True, method='ortho', tracker=None, X=initial)
+
+    return eigenvalues, eigenvectors
 
 
 def eigValueSh(laplacian: torch.Tensor, cuda: bool, device: torch.device) -> torch.Tensor:
