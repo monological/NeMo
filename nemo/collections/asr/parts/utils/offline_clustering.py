@@ -520,6 +520,9 @@ def getMultiScaleCosAffinityMatrix(
         mapping_argmat = session_scale_mapping_list[scale_idx]
         emb_t = embeddings_in_scales[scale_idx].half().to(device)
 
+        # Assert that mapping_argmat and emb_t have the same size
+        assert emb_t.shape[0] == mapping_argmat.shape[0], "Size mismatch between mapping_argmat and emb_t"
+
         # We are going to process data in chunks to save memory.
         chunks = torch.chunk(emb_t, chunk_size, dim=0)
         score_mat_torch_chunks = [getCosAffinityMatrix(chunk) for chunk in chunks]
@@ -533,17 +536,21 @@ def getMultiScaleCosAffinityMatrix(
             assert (start_idx < mapping_argmat.shape[0]) & (end_idx <= mapping_argmat.shape[0]), "Invalid indices: start_idx or end_idx out of bounds"
 
             # Ensure that mapping_argmat is of the correct size
-            mapping_argmat = mapping_argmat[:end_idx]
+            mapping_argmat_chunk = mapping_argmat[start_idx:end_idx]
 
-            repeat_list = getRepeatedList(mapping_argmat[start_idx:end_idx], torch.tensor(score_mat_torch.shape[0])).to(device)
+            repeat_list = getRepeatedList(mapping_argmat_chunk, torch.tensor(score_mat_torch.shape[0])).to(device)
             repeated_tensor_0 = torch.repeat_interleave(score_mat_torch, repeats=repeat_list, dim=0).to(device)
             repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
 
             slice_size = end_idx - start_idx
 
             repeated_tensor_resized = torch.zeros((slice_size, slice_size), device=device)
-            repeated_tensor_resized[:min(repeated_tensor_1.shape[0], slice_size), :min(repeated_tensor_1.shape[1], slice_size)] \
-                = repeated_tensor_1[:min(repeated_tensor_1.shape[0], slice_size), :min(repeated_tensor_1.shape[1], slice_size)]
+            min_shape = min(repeated_tensor_1.shape[0], slice_size)
+
+            # Assert that repeated_tensor_resized is not larger than repeated_tensor_1
+            assert repeated_tensor_resized.shape[0] <= repeated_tensor_1.shape[0], "repeated_tensor_resized is larger than repeated_tensor_1"
+
+            repeated_tensor_resized[:min_shape, :min_shape] = repeated_tensor_1[:min_shape, :min_shape]
             fused_sim_d[start_idx:end_idx, start_idx:end_idx] += multiscale_weights[scale_idx] * repeated_tensor_resized
 
     return fused_sim_d
