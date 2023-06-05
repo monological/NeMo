@@ -540,8 +540,8 @@ def getMultiScaleCosAffinityMatrix(
 
             repeat_list = getRepeatedList(mapping_argmat_chunk, torch.tensor(score_mat_torch.shape[0])).to(device)
 
-            print(f"mapping_argmat_chunk: {mapping_argmat_chunk}, shape: {mapping_argmat_chunk.shape}")  # Added print
-            print(f"repeat_list: {repeat_list}, shape: {repeat_list.shape}")  # Added print
+            #print(f"mapping_argmat_chunk: {mapping_argmat_chunk}, shape: {mapping_argmat_chunk.shape}")  # Added print
+            #print(f"repeat_list: {repeat_list}, shape: {repeat_list.shape}")  # Added print
 
             repeated_tensor_0 = torch.repeat_interleave(score_mat_torch, repeats=repeat_list, dim=0).to(device)
             repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
@@ -582,11 +582,8 @@ def eigDecompose(laplacian_matrix, k):
     assert torch.allclose(laplacian_matrix, laplacian_matrix.T), \
         "Your Laplacian Matrix is not symmetric. Make sure that it is symmetric to perform Spectral Clustering."
 
-    # Making sure the matrix is on the same device as the laplacian matrix
-    initial = torch.randn((laplacian_matrix.size(-1), k)).to(laplacian_matrix.device)
-
     # eigenvalues and eigenvectors
-    eigenvalues, eigenvectors = torch.lobpcg(laplacian_matrix, k=k, largest=True, method='ortho', tracker=None, X=initial)
+    eigenvalues, eigenvectors = torch.lobpcg(laplacian_matrix, k=k, largest=True, method='ortho', tracker=None)
 
     return eigenvalues, eigenvectors
 
