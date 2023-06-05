@@ -535,6 +535,9 @@ def getMultiScaleCosAffinityMatrix(
             # Ensure that mapping_argmat is of the correct size
             mapping_argmat_chunk = mapping_argmat[start_idx:end_idx]
 
+            min_value = torch.min(mapping_argmat_chunk)
+            mapping_argmat_chunk -= min_value
+
             repeat_list = getRepeatedList(mapping_argmat_chunk, torch.tensor(score_mat_torch.shape[0])).to(device)
 
             print(f"mapping_argmat_chunk: {mapping_argmat_chunk}, shape: {mapping_argmat_chunk.shape}")  # Added print
