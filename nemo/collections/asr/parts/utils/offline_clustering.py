@@ -539,16 +539,22 @@ def getMultiScaleCosAffinityMatrix(
             repeated_tensor_0 = torch.repeat_interleave(score_mat_torch, repeats=repeat_list, dim=0).to(device)
             repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
 
+            # Calculate the actual size of the current chunk
             slice_size = end_idx - start_idx
 
-            repeated_tensor_resized = torch.zeros((slice_size, slice_size), device=device)
+            # Create a tensor with the correct size directly
+            repeated_tensor_resized = torch.empty((slice_size, slice_size), device=device)
+
+            # Compute the actual size to use during the assignment, which is the minimum of
+            # the first dimension of repeated_tensor_1 and the calculated slice_size
             min_shape = min(repeated_tensor_1.shape[0], slice_size)
 
-            # Assert that repeated_tensor_resized is not larger than repeated_tensor_1
             assert repeated_tensor_resized.shape[0] <= repeated_tensor_1.shape[0], "repeated_tensor_resized is larger than repeated_tensor_1"
 
+            # Perform the assignment using the actual size
             repeated_tensor_resized[:min_shape, :min_shape] = repeated_tensor_1[:min_shape, :min_shape]
             fused_sim_d[start_idx:end_idx, start_idx:end_idx] += multiscale_weights[scale_idx] * repeated_tensor_resized
+
 
     return fused_sim_d
 
