@@ -577,13 +577,26 @@ def getLaplacian(X: torch.Tensor) -> torch.Tensor:
     return L
 
 
-def eigDecompose(laplacian_matrix, k):
-    # Laplacian matrix must be symmetric, hence we assert this below.
-    #assert torch.allclose(laplacian_matrix, laplacian_matrix.T), \
-    #    "Your Laplacian Matrix is not symmetric. Make sure that it is symmetric to perform Spectral Clustering."
+def eigDecompose(laplacian_matrix, k, chunk_size=1000):
+    # Assure the laplacian_matrix is symmetric
+    assert torch.allclose(laplacian_matrix, laplacian_matrix.T), \
+        "Your Laplacian Matrix is not symmetric. Make sure that it is symmetric to perform Spectral Clustering."
 
-    # eigenvalues and eigenvectors
-    eigenvalues, eigenvectors = torch.lobpcg(laplacian_matrix, k=k, largest=True, method='ortho', tracker=None)
+    # Initialize empty lists for eigenvalues and eigenvectors
+    eigenvalues_list = []
+    eigenvectors_list = []
+
+    # Process in chunks
+    for i in range(0, laplacian_matrix.size(-1), chunk_size):
+        laplacian_chunk = laplacian_matrix[i:i + chunk_size]
+        initial = torch.randn((laplacian_chunk.size(-1), k)).to(laplacian_chunk.device)
+        eigenvalues, eigenvectors = torch.lobpcg(laplacian_chunk, k=k, largest=True, method='ortho', tracker=None, X=initial)
+        eigenvalues_list.append(eigenvalues)
+        eigenvectors_list.append(eigenvectors)
+
+    # Concatenate the results
+    eigenvalues = torch.cat(eigenvalues_list)
+    eigenvectors = torch.cat(eigenvectors_list)
 
     return eigenvalues, eigenvectors
 
