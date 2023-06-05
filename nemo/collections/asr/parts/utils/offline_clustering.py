@@ -508,7 +508,7 @@ def getMultiScaleCosAffinityMatrix(
     embeddings_in_scales: List[torch.Tensor],
     timestamps_in_scales: List[torch.Tensor],
     device: torch.device = torch.device('cpu'),
-    chunk_size: int = 1000
+    chunk_size: int = 200
 ) -> torch.Tensor:
 
     multiscale_weights = torch.squeeze(multiscale_weights, dim=0).to(device)
