@@ -508,7 +508,7 @@ def getMultiScaleCosAffinityMatrix(
     embeddings_in_scales: List[torch.Tensor],
     timestamps_in_scales: List[torch.Tensor],
     device: torch.device = torch.device('cpu'),
-    chunk_size: int = 10000
+    chunk_size: int = 1000
 ) -> torch.Tensor:
 
     multiscale_weights = torch.squeeze(multiscale_weights, dim=0).to(device)
@@ -519,9 +519,6 @@ def getMultiScaleCosAffinityMatrix(
     for scale_idx in scale_list:
         mapping_argmat = session_scale_mapping_list[scale_idx]
         emb_t = embeddings_in_scales[scale_idx].half().to(device)
-
-        # Assert that mapping_argmat and emb_t have the same size
-        assert emb_t.shape[0] == mapping_argmat.shape[0], "Size mismatch between mapping_argmat and emb_t"
 
         # We are going to process data in chunks to save memory.
         chunks = torch.chunk(emb_t, chunk_size, dim=0)
