@@ -876,7 +876,8 @@ class SpectralClustering:
                 clustering label output
         """
         laplacian = getLaplacian(affinity_mat)
-        _, diffusion_map_ = eigDecompose(laplacian, cuda=cuda, device=affinity_mat.device)
+        #_, diffusion_map_ = eigDecompose(laplacian, cuda=cuda, device=affinity_mat.device)
+        _, diffusion_map_ = eigDecompose(laplacian, self.n_clusters)
         diffusion_map = diffusion_map_[:, :n_spks]
         inv_idx = torch.arange(diffusion_map.size(1) - 1, -1, -1).long()
         embedding = diffusion_map.T[inv_idx, :]
