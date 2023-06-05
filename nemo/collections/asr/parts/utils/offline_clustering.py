@@ -536,6 +536,10 @@ def getMultiScaleCosAffinityMatrix(
             mapping_argmat_chunk = mapping_argmat[start_idx:end_idx]
 
             repeat_list = getRepeatedList(mapping_argmat_chunk, torch.tensor(score_mat_torch.shape[0])).to(device)
+
+            print(f"mapping_argmat_chunk: {mapping_argmat_chunk}, shape: {mapping_argmat_chunk.shape}")  # Added print
+            print(f"repeat_list: {repeat_list}, shape: {repeat_list.shape}")  # Added print
+
             repeated_tensor_0 = torch.repeat_interleave(score_mat_torch, repeats=repeat_list, dim=0).to(device)
             repeated_tensor_1 = torch.repeat_interleave(repeated_tensor_0, repeats=repeat_list, dim=1).to(device)
 
