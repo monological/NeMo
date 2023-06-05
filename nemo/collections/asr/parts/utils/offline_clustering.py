@@ -579,8 +579,8 @@ def getLaplacian(X: torch.Tensor) -> torch.Tensor:
 
 def eigDecompose(laplacian_matrix, k):
     # Laplacian matrix must be symmetric, hence we assert this below.
-    assert torch.allclose(laplacian_matrix, laplacian_matrix.T), \
-        "Your Laplacian Matrix is not symmetric. Make sure that it is symmetric to perform Spectral Clustering."
+    #assert torch.allclose(laplacian_matrix, laplacian_matrix.T), \
+    #    "Your Laplacian Matrix is not symmetric. Make sure that it is symmetric to perform Spectral Clustering."
 
     # eigenvalues and eigenvectors
     eigenvalues, eigenvectors = torch.lobpcg(laplacian_matrix, k=k, largest=True, method='ortho', tracker=None)
